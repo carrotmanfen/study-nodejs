@@ -1,4 +1,7 @@
+require('dotenv').config();
+
 const userRoutes = require('./routes/userRoutes');
+const loginRoutes = require('./routes/loginRoutes');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -7,7 +10,8 @@ const swaggerUi = require('swagger-ui-express');
 
 const app = express();
 app.use(express.json());
-const mongoURI = 'mongodb://localhost:27017/nodejs-mongodb';
+const mongoURI = process.env.DATABASE_URL;
+const port = process.env.PORT || 3000;
 
 mongoose.connect(mongoURI, {
     useNewUrlParser: true,
@@ -30,6 +34,18 @@ mongoose.connect(mongoURI, {
           url: 'http://localhost:3000',
         },
       ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+        },
+      },
+      security: [{
+        bearerAuth: []
+      }]
     },
     apis: ['./routes/*.js'], // Path to the API docs
   };
@@ -38,7 +54,8 @@ mongoose.connect(mongoURI, {
   app.use('/api', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
   app.use('/users', userRoutes);
+  app.use('/auth', loginRoutes);
   app.use(cors());
-  app.listen(3000, () => {
+  app.listen(port, () => {
     console.log('Server is running on port 3000');
   });

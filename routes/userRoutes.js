@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-// Create a new user
+const authMiddleware = require('../middleware/auth');
+
 
 /**
  * @swagger
@@ -82,7 +83,7 @@ router.post('/create', async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/get', async (req, res) => {
+router.get('/get',authMiddleware, async (req, res) => {
     try {
         const users = await User.find();
         res.json(users);
