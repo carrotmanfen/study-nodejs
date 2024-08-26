@@ -64,6 +64,52 @@ router.post('/login', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /auth/refreshToken:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: The access token was successfully refreshed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *       401:
+ *         description: Refresh token is required
+ */
+
+router.post('/refreshToken', (req, res) => {
+    const refreshToken = req.body;
+    if (!refreshToken) {
+        return res.status(401).json({ message: 'Refresh token is required' });
+    }
+
+    jwt.verify({refreshToken}, refreshTokenSecret, (err, user) => {
+        if (err) {
+            return res.status(403).json({ message: 'Invalid refresh token' });
+        }
+
+        const newAccessToken = jwt.sign({ userId: user.userId, displayName: user.displayName }, accessTokenSecret, { expiresIn: '15m' });
+        res.json({
+            accessToken: newAccessToken
+        });
+    });
+});
 
 
 module.exports = router;
