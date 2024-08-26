@@ -6,6 +6,9 @@ const User = require('../models/User');
 const authMiddleware = require('../middleware/auth');
 const jwt = require('jsonwebtoken');
 
+const UpdateUserDto = require('../dtos/userUpdateDto');
+const CreateUserDto = require('../dtos/userCreateDto');
+
 /**
  * @swagger
  * components:
@@ -58,7 +61,20 @@ const jwt = require('jsonwebtoken');
  *         description: Bad request
  */
 router.post('/create', async (req, res) => {
-    const newUser = new User(req.body);
+    const createUserDto = new CreateUserDto(req.body);
+    const errors = createUserDto.validate();
+    if (errors.length > 0) {
+        return res.status(400).json({ errors });
+    }
+    const account = await User.findOne({ $or: [{username: createUserDto.username},{displayName:createUserDto.displayName}]});
+    if (account) {
+        if(account.username === createUserDto.username) {
+            return res.status(400).json({ message: 'Username already exists' });
+        }else {
+            return res.status(400).json({ message: 'Display name already exists' });
+        }
+    }
+    const newUser = new User(createUserDto);
     try {
         const savedUser = await newUser.save();
         res.json(savedUser);
@@ -94,7 +110,7 @@ router.post('/create', async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/get/me',authMiddleware, async (req, res) => {
+router.get('/get/me', authMiddleware, async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
         const token = authHeader.split(' ')[1];
@@ -108,7 +124,7 @@ router.get('/get/me',authMiddleware, async (req, res) => {
             }
 
             const users = await User.findOne({ _id: user.userId });
-            if(!users) {
+            if (!users) {
                 return res.status(400).json({ message: 'User not found' });
             }
             res.json(users);
@@ -168,17 +184,25 @@ router.patch('/update/me', authMiddleware, async (req, res) => {
             }
 
             const account = await User.findOne({ _id: user.userId });
-            if(!account) {
+            if (!account) {
                 return res.status(400).json({ message: 'User not found' });
             }
-            if (req.body.displayName) {
-                account.displayName = req.body.displayName;
+
+            const updateUserDto = new UpdateUserDto(req.body);
+            const errors = updateUserDto.validate();
+
+            if (errors.length > 0) {
+                return res.status(400).json({ errors });
             }
-            if (req.body.username) {
-                account.username = req.body.username;
+
+            if (updateUserDto.displayName) {
+                account.displayName = updateUserDto.displayName;
             }
-            if (req.body.password) {
-                account.password = req.body.password;
+            if (updateUserDto.username) {
+                account.username = updateUserDto.username;
+            }
+            if (updateUserDto.password) {
+                account.password = updateUserDto.password;
             }
             const updatedUser = await account.save();
             res.json(updatedUser);
@@ -218,10 +242,10 @@ router.delete('/delete/me', authMiddleware, async (req, res) => {
             }
 
             const account = await User.findOne({ _id: user.userId });
-            if(!account) {
+            if (!account) {
                 return res.status(400).json({ message: 'User not found' });
             }
-            const result = await account.deleteOne({_id:account._id}).exec()
+            const result = await account.deleteOne({ _id: account._id }).exec()
             res.json({ message: 'User deleted successfully', result });
         });
 

@@ -5,6 +5,9 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
+const RefreshTokenDto = require('../dtos/userRefreshTokenDto');
+const LoginUserDto = require('../dtos/userLoginDto');
+
 const accessTokenSecret = process.env.ACCESS_TOKEN_KEY;
 const refreshTokenSecret = process.env.REFRESH_TOKEN_KEY;
 
@@ -44,11 +47,16 @@ const refreshTokenSecret = process.env.REFRESH_TOKEN_KEY;
  */
 router.post('/login', async (req, res) => {
     try {
-        const user = await User.findOne({ username: req.body.username });
+        const loginUserDto = new LoginUserDto(req.body);
+        const errors = loginUserDto.validate();
+        if(errors.length > 0) {
+            return res.status(400).json({ errors });
+        }
+        const user = await User.findOne({ username: loginUserDto.username });
         if(!user) {
             return res.status(400).json({ message: 'User not found' });
         }
-        if(user.password !== req.body.password) {
+        if(user.password !== loginUserDto.password) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
         const accessToken = jwt.sign({ userId: user._id, displayName:user.displayName }, accessTokenSecret, { expiresIn: '15m' });
@@ -94,12 +102,16 @@ router.post('/login', async (req, res) => {
  */
 
 router.post('/refreshToken', (req, res) => {
-    const refreshToken = req.body;
-    if (!refreshToken) {
+    const refreshTokenDto = new RefreshTokenDto(req.body);
+    const errors = refreshTokenDto.validate();
+    if(errors.length > 0) {
+        return res.status(400).json({ errors });
+    }
+    if (!refreshTokenDto) {
         return res.status(401).json({ message: 'Refresh token is required' });
     }
-
-    jwt.verify({refreshToken}, refreshTokenSecret, (err, user) => {
+    const refreshToken = refreshTokenDto.refreshToken;
+    jwt.verify(refreshToken, refreshTokenSecret, (err, user) => {
         if (err) {
             return res.status(403).json({ message: 'Invalid refresh token' });
         }
