@@ -189,4 +189,45 @@ router.patch('/update/me', authMiddleware, async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /users/delete/me:
+ *   delete:
+ *     summary: Delete user profile using accessToken
+ *     tags: [User]
+ *     responses:
+ *       200:
+ *         description: The user was successfully deleted
+ *       401:
+ *         description: Unauthorized - Invalid or missing access token
+ *       500:
+ *         description: Server error
+ */
+
+router.delete('/delete/me', authMiddleware, async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+            return res.sendStatus(401).json({ message: 'Unauthorized' });
+        }
+        const accessTokenSecret = process.env.ACCESS_TOKEN_KEY;
+        jwt.verify(token, accessTokenSecret, async (err, user) => {
+            if (err) {
+                return res.sendStatus(401).json({ message: 'Unauthorized' });
+            }
+
+            const account = await User.findOne({ _id: user.userId });
+            if(!account) {
+                return res.status(400).json({ message: 'User not found' });
+            }
+            const result = await account.deleteOne({_id:account._id}).exec()
+            res.json({ message: 'User deleted successfully', result });
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 module.exports = router;
