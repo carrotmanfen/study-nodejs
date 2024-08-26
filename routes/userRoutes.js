@@ -99,12 +99,12 @@ router.get('/get/me',authMiddleware, async (req, res) => {
         const authHeader = req.headers['authorization'];
         const token = authHeader.split(' ')[1];
         if (!token) {
-            return res.sendStatus(401);
+            return res.sendStatus(401).json({ message: 'Unauthorized' });
         }
         const accessTokenSecret = process.env.ACCESS_TOKEN_KEY;
         jwt.verify(token, accessTokenSecret, async (err, user) => {
             if (err) {
-                return res.sendStatus(401);
+                return res.sendStatus(401).json({ message: 'Unauthorized' });
             }
 
             const users = await User.findOne({ _id: user.userId });
@@ -159,12 +159,12 @@ router.patch('/update/me', authMiddleware, async (req, res) => {
         const authHeader = req.headers['authorization'];
         const token = authHeader.split(' ')[1];
         if (!token) {
-            return res.sendStatus(401);
+            return res.sendStatus(401).json({ message: 'Unauthorized' });
         }
         const accessTokenSecret = process.env.ACCESS_TOKEN_KEY;
         jwt.verify(token, accessTokenSecret, async (err, user) => {
             if (err) {
-                return res.sendStatus(401);
+                return res.sendStatus(401).json({ message: 'Unauthorized' });
             }
 
             const account = await User.findOne({ _id: user.userId });
